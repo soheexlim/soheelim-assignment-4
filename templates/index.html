@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LSA Search Engine</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        input { width: 80%; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; }
+        #results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>LSA Search Engine</h1>
+    <input type="text" id="query" placeholder="Type your search query here...">
+    <button onclick="performSearch()">Search</button>
+    <div id="results"></div>
+    <div id="chart"></div>
+
+    <script>
+        function performSearch() {
+            const query = document.getElementById('query').value;
+            fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            })
+            .then(response => response.json())
+            .then(data => displayResults(data));
+        }
+
+        function displayResults(results) {
+            let resultDiv = document.getElementById('results');
+            resultDiv.innerHTML = ''; // Clear previous results
+
+            results.forEach(([doc, similarity], index) => {
+                // Create a section for each document
+                resultDiv.innerHTML += `
+                    <div style="border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 10px 0;">
+                        <p><strong>Document ${index + 1}</strong></p>
+                        <pre style="white-space: pre-wrap; word-wrap: break-word;">${doc}</pre>
+                        <p><strong>Similarity:</strong> ${similarity.toFixed(4)}</p>
+                    </div>
+                `;
+            });
+
+            renderBarChart(results);
+        }
+
+        function displayResults(results) {
+            let resultDiv = document.getElementById('results');
+            resultDiv.innerHTML = ''; // Clear previous results
+            let similarities = [];
+            let labels = [];
+
+            results.forEach(([doc, similarity], index) => {
+                const docId = `doc-${index}`;
+                resultDiv.innerHTML += `
+                    <p><strong>Document ${index + 1}:</strong> 
+                    <button onclick="toggleContent('${docId}')">Show/Hide</button></p>
+                    <pre id="${docId}" style="display:none;">${doc}</pre>
+                    <p>(Similarity: ${similarity.toFixed(4)})</p><hr>
+                `;
+                similarities.push(similarity);
+                labels.push(`Doc ${index + 1}`);
+            });
+
+            plotChart(labels, similarities);
+        }
+
+        function toggleContent(docId) {
+            const docElement = document.getElementById(docId);
+            docElement.style.display = docElement.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function plotChart(labels, similarities) {
+            let trace = {
+                x: labels,
+                y: similarities,
+                type: 'bar',
+                text: similarities.map(sim => `Cosine Similarity: ${sim.toFixed(4)}`), // Hover text
+                hovertemplate: '<b>%{x}</b><br>Similarity: %{y:.4f}<extra></extra>', // Custom hover template
+            };
+
+            let layout = {
+                title: 'Cosine Similarity of Top Documents',
+                xaxis: { title: 'Documents' },
+                yaxis: { title: 'Cosine Similarity', range: [0, 1] },
+            };
+
+            Plotly.newPlot('chart', [trace], layout);
+        }
+
+    </script>
+</body>
+</html>
